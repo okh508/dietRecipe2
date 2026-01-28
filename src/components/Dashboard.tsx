@@ -12,16 +12,31 @@ interface DashboardProps {
     onMenuClick?: () => void;
     onProfileClick?: () => void;
     userDiets?: string[];
+    savedRecipeIds: Set<string>;
+    onToggleSave: (recipe: Recipe) => void;
+    avatarUrl?: string;
+    onLogout?: () => void;
+    hasNotifications?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onRecipeSelect, onMenuClick, onProfileClick, userDiets = [] }) => {
+export const Dashboard: React.FC<DashboardProps> = ({
+    onRecipeSelect,
+    onMenuClick,
+    onProfileClick,
+    userDiets = [],
+    savedRecipeIds,
+    onToggleSave,
+    avatarUrl,
+    onLogout,
+    hasNotifications
+}) => {
     const [searchQuery, setSearchQuery] = useState('');
     // Initialize filters with user's first diet preference if available
     const [activeFilters, setActiveFilters] = useState<Record<string, string>>(() => {
         if (userDiets.length > 0 && userDiets[0]) {
             return { diet: userDiets[0] };
         }
-        return {};
+        return {} as Record<string, string>;
     });
 
     const handleFilterChange = (category: string, value: string) => {
@@ -82,7 +97,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onRecipeSelect, onMenuClic
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 onMenuClick={onMenuClick}
-                onProfileClick={onProfileClick}
+                onSettingsClick={onProfileClick}
+                avatarUrl={avatarUrl}
+                onLogout={onLogout}
+                hasNotifications={hasNotifications}
             />
 
 
@@ -97,7 +115,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onRecipeSelect, onMenuClic
                     <>
                         {featuredRecipe && (
                             <div className="mb-10">
-                                <FeaturedRecipeCard recipe={featuredRecipe} onClick={() => onRecipeSelect(featuredRecipe)} />
+                                <FeaturedRecipeCard
+                                    recipe={featuredRecipe}
+                                    onClick={() => onRecipeSelect(featuredRecipe)}
+                                    isSaved={savedRecipeIds.has(featuredRecipe.id)}
+                                    onToggleSave={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSave(featuredRecipe);
+                                    }}
+                                />
                             </div>
                         )}
 
@@ -105,7 +131,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onRecipeSelect, onMenuClic
                             <h3 className="text-xl font-heading font-bold text-text-primary mb-6">Latest Recipes ({filteredRecipes.length})</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {gridRecipes.map(recipe => (
-                                    <RecipeCard key={recipe.id} recipe={recipe} onClick={() => onRecipeSelect(recipe)} />
+                                    <RecipeCard
+                                        key={recipe.id}
+                                        recipe={recipe}
+                                        onClick={() => onRecipeSelect(recipe)}
+                                        isSaved={savedRecipeIds.has(recipe.id)}
+                                        onToggleSave={(e) => {
+                                            e.stopPropagation();
+                                            onToggleSave(recipe);
+                                        }}
+                                    />
                                 ))}
                             </div>
                         </div>

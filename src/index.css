@@ -3,10 +3,39 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: #33B5E5;
+    --color-sidebar: #F0F9FF;
+    --color-page: #F5F7FA;
+    --color-card: #FFFFFF;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #6B7280;
+    --color-border: #E5E7EB;
+  }
+
+  .dark {
+    --color-primary: #33B5E5;
+    --color-sidebar: #111827;
+    --color-page: #030712;
+    --color-card: #1F2937;
+    --color-text-primary: #F9FAFB;
+    --color-text-secondary: #9CA3AF;
+    --color-border: #374151;
+  }
+}
+
+
+@layer base {
   body {
     @apply bg-page text-text-primary font-sans;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading font-bold;
   }
 }

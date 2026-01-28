@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BookOpen, ShoppingCart, PieChart, Settings, HelpCircle, X } from 'lucide-react';
+import { Home, ShoppingCart, PieChart, Settings, HelpCircle, X, Heart } from 'lucide-react';
 
 interface SidebarProps {
     activeView: string;
@@ -12,7 +12,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, groceryCount, isOpen, onClose }) => {
     const menuItems = [
         { icon: Home, label: 'Dashboard', id: 'dashboard' },
-        { icon: BookOpen, label: 'My Recipes', id: 'my-recipes' },
+        { icon: Heart, label: 'My Recipes', id: 'my-recipes' },
         { icon: ShoppingCart, label: 'Grocery List', id: 'grocery-list' },
         { icon: PieChart, label: 'Tracking', id: 'tracking' },
         { icon: Settings, label: 'Settings', id: 'settings' },

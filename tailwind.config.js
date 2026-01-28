@@ -4,16 +4,17 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        primary: "#33B5E5",
-        sidebar: "#F0F9FF",
-        page: "#F5F7FA",
-        card: "#FFFFFF",
-        "text-primary": "#1A1A1A",
-        "text-secondary": "#6B7280",
-        border: "#E5E7EB",
+        primary: "var(--color-primary)",
+        sidebar: "var(--color-sidebar)",
+        page: "var(--color-page)",
+        card: "var(--color-card)",
+        "text-primary": "var(--color-text-primary)",
+        "text-secondary": "var(--color-text-secondary)",
+        border: "var(--color-border)",
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui'],

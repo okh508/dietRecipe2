@@ -1,15 +1,21 @@
 import React from 'react';
 import { Trash2, Copy, ShoppingCart } from 'lucide-react';
 
+export interface GroceryItem {
+    id: string;
+    item: string;
+    is_checked: boolean;
+}
+
 interface GroceryListProps {
-    items: string[];
-    onRemoveItem: (index: number) => void;
+    items: GroceryItem[];
+    onRemoveItem: (id: string) => void;
     onClearList: () => void;
 }
 
 export const GroceryList: React.FC<GroceryListProps> = ({ items, onRemoveItem, onClearList }) => {
     const handleCopy = () => {
-        const text = items.join('\n');
+        const text = items.map(i => i.item).join('\n');
         navigator.clipboard.writeText(text);
         alert('Grocery list copied to clipboard!');
     };
@@ -58,11 +64,11 @@ export const GroceryList: React.FC<GroceryListProps> = ({ items, onRemoveItem, o
             ) : (
                 <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
                     <ul className="divide-y divide-border">
-                        {items.map((item, index) => (
-                            <li key={`${item}-${index}`} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group">
-                                <span className="text-text-primary font-medium">{item}</span>
+                        {items.map((item) => (
+                            <li key={item.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group">
+                                <span className="text-text-primary font-medium">{item.item}</span>
                                 <button
-                                    onClick={() => onRemoveItem(index)}
+                                    onClick={() => onRemoveItem(item.id)}
                                     className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                                     aria-label="Remove item"
                                 >

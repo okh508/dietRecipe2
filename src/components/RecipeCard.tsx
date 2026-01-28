@@ -1,15 +1,24 @@
 import React from 'react';
 import type { Recipe } from '../data/recipes';
-import { Clock, Flame } from 'lucide-react';
+import { Clock, Flame, Heart } from 'lucide-react';
 
 interface RecipeCardProps {
     recipe: Recipe;
     onClick: () => void;
+    isSaved: boolean;
+    onToggleSave: (e: React.MouseEvent) => void;
 }
 
-export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick }) => {
+export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onClick, isSaved, onToggleSave }) => {
     return (
-        <div onClick={onClick} className="bg-card rounded-xl shadow-card overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group cursor-pointer flex flex-col h-full">
+        <div onClick={onClick} className="bg-card rounded-xl shadow-card overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group cursor-pointer flex flex-col h-full relative">
+            <button
+                onClick={onToggleSave}
+                className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm transition-colors text-red-500"
+                title={isSaved ? "Remove from My Recipes" : "Save to My Recipes"}
+            >
+                <Heart size={20} className={isSaved ? "fill-current" : ""} />
+            </button>
             <div className="h-48 overflow-hidden relative">
                 <img
                     src={recipe.image}

@@ -12,6 +12,7 @@ interface OnboardingProps {
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+    const [isLogin, setIsLogin] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,29 +34,41 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !email.trim() || !password.trim()) return;
+        if ((!isLogin && !name.trim()) || !email.trim() || !password.trim()) return;
 
         setLoading(true);
         setError(null);
 
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: name, // Metadata for triggers if needed
+            let data, error;
+            if (isLogin) {
+                const res = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+                data = res.data;
+                error = res.error;
+            } else {
+                const res = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: name,
+                        }
                     }
-                }
-            });
+                });
+                data = res.data;
+                error = res.error;
+            }
 
             if (error) throw error;
 
             if (data.session) {
                 // Determine if we need to call onComplete or if App.tsx listener handles it
                 // We call onComplete to ensure the profile is saved to DB immediately via the App handler
-                onComplete({ name, diets: selectedDiets });
-            } else if (data.user) {
+                onComplete({ name: name || 'User', diets: selectedDiets });
+            } else if (data.user && !isLogin) {
                 // Confirmation case
                 onComplete({ name, diets: selectedDiets });
                 alert('Account created! Please check your email.');
@@ -77,25 +90,31 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3 shadow-lg shadow-primary/20">
                         <ChefHat className="text-white w-8 h-8" />
                     </div>
-                    <h1 className="text-3xl font-heading font-bold text-text-primary mb-2">Welcome to NutriChef</h1>
-                    <p className="text-text-secondary">Create an account to personalize your recipes.</p>
+                    <h1 className="text-3xl font-heading font-bold text-text-primary mb-2">
+                        {isLogin ? 'Welcome Back' : 'Welcome to NutriChef'}
+                    </h1>
+                    <p className="text-text-secondary">
+                        {isLogin ? 'Sign in to confirm your recipes.' : 'Create an account to personalize your recipes.'}
+                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
                     <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-text-primary">Full Name</label>
-                            <input
-                                type="text"
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Enter your name"
-                                className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                            />
-                        </div>
+                        {!isLogin && (
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-primary">Full Name</label>
+                                <input
+                                    type="text"
+                                    required={!isLogin}
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Enter your name"
+                                    className="w-full px-4 py-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                />
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-text-primary">Email Address</label>
@@ -129,37 +148,45 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-text-primary">Dietary Preferences</label>
-                        <div className="flex flex-wrap gap-2">
-                            {diets.map(diet => (
-                                <button
-                                    key={diet}
-                                    type="button"
-                                    onClick={() => toggleDiet(diet)}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${selectedDiets.includes(diet)
-                                        ? 'bg-green-50 border-green-200 text-green-700 shadow-sm'
-                                        : 'bg-white border-border text-text-secondary hover:border-green-200'
-                                        }`}
-                                >
-                                    {diet}
-                                </button>
-                            ))}
+                    {!isLogin && (
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-text-primary">Dietary Preferences</label>
+                            <div className="flex flex-wrap gap-2">
+                                {diets.map(diet => (
+                                    <button
+                                        key={diet}
+                                        type="button"
+                                        onClick={() => toggleDiet(diet)}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${selectedDiets.includes(diet)
+                                            ? 'bg-green-50 border-green-200 text-green-700 shadow-sm'
+                                            : 'bg-white border-border text-text-secondary hover:border-green-200'
+                                            }`}
+                                    >
+                                        {diet}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <button
                         type="submit"
-                        disabled={loading || !name.trim() || !email.trim() || !password.trim()}
+                        disabled={loading || (!isLogin && !name.trim()) || !email.trim() || !password.trim()}
                         className="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/25 hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 group"
                     >
-                        {loading ? 'Creating Account...' : 'Get Started'}
+                        {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                         {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                     </button>
 
                     <div className="text-center">
                         <p className="text-sm text-text-secondary">
-                            Already have an account? <span className="text-primary font-bold cursor-pointer hover:underline" onClick={() => alert("Login not implemented yet in this demo!")}>Sign In</span>
+                            {isLogin ? "Don't have an account? " : "Already have an account? "}
+                            <span
+                                className="text-primary font-bold cursor-pointer hover:underline"
+                                onClick={() => setIsLogin(!isLogin)}
+                            >
+                                {isLogin ? 'Sign Up' : 'Sign In'}
+                            </span>
                         </p>
                     </div>
                 </form>

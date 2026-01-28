@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { User, Mail, Save, Bell, Shield, Moon, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
-    onSave: (preferences: { name: string; email: string; diets: string[] }) => void;
-    userProfile: { name: string; diets: string[] };
-    email?: string; // Add email prop
+    onSave: (preferences: { name: string; email: string; diets: string[]; avatar_url?: string }) => void;
+    userProfile: { name: string; diets: string[]; avatar_url?: string };
+    email?: string;
     onLogout: () => void;
+    isDarkMode: boolean;
+    onToggleTheme: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: initialEmail, onLogout }) => {
-    const [name, setName] = useState(userProfile.name);
+export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: initialEmail, onLogout, isDarkMode, onToggleTheme }) => {
+    const [name, setName] = useState(userProfile?.name || '');
     const [email, setEmail] = useState(initialEmail || 'user@example.com');
-    const [activeDiets, setActiveDiets] = useState<string[]>(userProfile.diets);
+    const [activeDiets, setActiveDiets] = useState<string[]>(userProfile?.diets || []);
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar_url);
+    const [uploading, setUploading] = useState(false);
     const [notifications, setNotifications] = useState(true);
 
     const diets = [
@@ -26,8 +31,42 @@ export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: 
         );
     };
 
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            setUploading(true);
+            if (!event.target.files || event.target.files.length === 0) {
+                return;
+            }
+            const file = event.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Lazy import supabase to avoid circular dep or issues if not needed immediately
+            const { supabase } = await import('../lib/supabase');
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            setAvatarUrl(data.publicUrl);
+        } catch (error: any) {
+            console.error('Upload Error Details:', error);
+            alert(`Error uploading avatar: ${error.message || 'Unknown error'} (Check console for details)`);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+
+
     const handleSave = () => {
-        onSave({ name, email, diets: activeDiets });
+        onSave({ name, email, diets: activeDiets, avatar_url: avatarUrl });
         const btn = document.getElementById('save-btn');
         if (btn) {
             const originalText = btn.innerHTML;
@@ -53,15 +92,29 @@ export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: 
                     </h2>
 
                     <div className="flex flex-col md:flex-row gap-8 items-start">
-                        <div className="w-24 h-24 rounded-full bg-indigo-100 border-2 border-indigo-200 overflow-hidden flex-shrink-0 relative group cursor-pointer">
-                            <img
-                                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200"
-                                alt="User"
-                                className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
-                                Change
+                        <div className="relative group">
+                            <div className="w-24 h-24 rounded-full bg-indigo-100 border-2 border-indigo-200 overflow-hidden flex-shrink-0 relative">
+                                <img
+                                    src={avatarUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200"}
+                                    alt="User"
+                                    className="w-full h-full object-cover"
+                                />
+                                {uploading && (
+                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
+                                )}
                             </div>
+                            <label className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full cursor-pointer shadow-lg hover:bg-primary-dark transition-colors" title="Change Photo">
+                                <SettingsIcon size={14} className="w-4 h-4" />
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAvatarUpload}
+                                    className="hidden"
+                                    disabled={uploading}
+                                />
+                            </label>
                         </div>
 
                         <div className="flex-1 w-full space-y-4">
@@ -143,7 +196,7 @@ export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: 
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between opacity-50 cursor-not-allowed">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
                                     <Moon size={20} />
@@ -153,9 +206,12 @@ export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: 
                                     <p className="text-sm text-text-secondary">Switch between light and dark themes</p>
                                 </div>
                             </div>
-                            <div className="w-12 h-6 bg-gray-200 rounded-full relative">
-                                <div className="w-4 h-4 bg-white rounded-full absolute top-1 left-1" />
-                            </div>
+                            <button
+                                onClick={onToggleTheme}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-primary' : 'bg-gray-200'}`}
+                            >
+                                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isDarkMode ? 'left-7' : 'left-1'}`} />
+                            </button>
                         </div>
                     </div>
                 </div>
