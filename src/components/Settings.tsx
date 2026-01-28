@@ -4,12 +4,13 @@ import { User, Mail, Save, Bell, Shield, Moon, LogOut, Settings as SettingsIcon 
 interface SettingsProps {
     onSave: (preferences: { name: string; email: string; diets: string[] }) => void;
     userProfile: { name: string; diets: string[] };
+    email?: string; // Add email prop
     onLogout: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, onLogout }) => {
+export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, email: initialEmail, onLogout }) => {
     const [name, setName] = useState(userProfile.name);
-    const [email, setEmail] = useState('user@example.com');
+    const [email, setEmail] = useState(initialEmail || 'user@example.com');
     const [activeDiets, setActiveDiets] = useState<string[]>(userProfile.diets);
     const [notifications, setNotifications] = useState(true);
 
@@ -167,6 +168,16 @@ export const Settings: React.FC<SettingsProps> = ({ onSave, userProfile, onLogou
                     >
                         <Save size={20} />
                         Save Changes
+                    </button>
+                </div>
+
+                <div className="border-t border-border pt-8 mt-4">
+                    <button
+                        onClick={onLogout}
+                        className="flex items-center gap-2 px-6 py-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium border border-transparent hover:border-red-100"
+                    >
+                        <LogOut size={20} />
+                        Sign Out
                     </button>
                 </div>
             </div>

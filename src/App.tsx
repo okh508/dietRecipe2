@@ -6,6 +6,8 @@ import { GroceryList } from './components/GroceryList';
 import { Settings } from './components/Settings';
 import { Onboarding } from './components/Onboarding';
 import type { Recipe } from './data/recipes';
+import { supabase } from './lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface UserProfile {
   name: string;
@@ -17,30 +19,80 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [groceryItems, setGroceryItems] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load profile from localStorage on mount
   useEffect(() => {
-    const savedProfile = localStorage.getItem('nutrichef_user_profile');
-    if (savedProfile) {
-      try {
-        setUserProfile(JSON.parse(savedProfile));
-      } catch (e) {
-        console.error('Failed to parse user profile', e);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) fetchProfile(session.user.id);
+      else setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) fetchProfile(session.user.id);
+      else {
+        setUserProfile(null);
+        setLoading(false);
       }
-    }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleCreateUser = (profile: UserProfile) => {
-    setUserProfile(profile);
-    localStorage.setItem('nutrichef_user_profile', JSON.stringify(profile));
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('full_name, diets')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      }
+
+      if (data) {
+        setUserProfile({
+          name: data.full_name,
+          diets: data.diets || []
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleCreateUser = async (profile: UserProfile, email?: string, password?: string) => {
+    // This will be called from Onboarding. 
+    // We expect Onboarding to handle the actual SignUp if it has the fields, 
+    // or we do it here if we pass credentials up.
+    // For now, let's assume Onboarding handles the auth call or we pass it down.
+    // Actually, to keep it clean, let's just refresh the session here or set the profile.
+    if (session) {
+      // Update profile if session exists (e.g. after sign up)
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: session.user.id,
+          full_name: profile.name,
+          diets: profile.diets
+        });
+      if (!error) setUserProfile(profile);
+    }
+  };
+
+  const handleLogout = async () => {
     if (confirm('Are you sure you want to sign out? This will reset your session.')) {
+      await supabase.auth.signOut();
       setUserProfile(null);
-      localStorage.removeItem('nutrichef_user_profile');
-      setActiveView('dashboard'); // Reset view for next login
+      setActiveView('dashboard');
     }
   };
 
@@ -78,16 +130,29 @@ function App() {
     }
   };
 
-  const handleSaveSettings = (settings: any) => {
+  const handleSaveSettings = async (settings: any) => {
     console.log('Settings saved:', settings);
-    if (userProfile) {
+    if (session && userProfile) {
       const updatedProfile = { ...userProfile, ...settings };
       setUserProfile(updatedProfile);
-      localStorage.setItem('nutrichef_user_profile', JSON.stringify(updatedProfile));
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: session.user.id,
+          full_name: updatedProfile.name,
+          diets: updatedProfile.diets
+        });
+
+      if (error) alert('Error saving settings to database!');
     }
   };
 
-  if (!userProfile) {
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (!session) {
     return <Onboarding onComplete={handleCreateUser} />;
   }
 
@@ -98,7 +163,7 @@ function App() {
           onRecipeSelect={handleRecipeSelect}
           onMenuClick={() => setIsSidebarOpen(true)}
           onProfileClick={() => handleNavigate('settings')}
-          userDiets={userProfile.diets}
+          userDiets={userProfile?.diets}
         />
       )}
 
@@ -118,10 +183,11 @@ function App() {
         />
       )}
 
-      {activeView === 'settings' && (
+      {activeView === 'settings' && userProfile && (
         <Settings
           onSave={handleSaveSettings}
           userProfile={userProfile}
+          email={session.user.email}
           onLogout={handleLogout}
         />
       )}
